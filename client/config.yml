@@ -1,2 +1,2 @@
 agent_prompt: "You are a AI assistant whose expertise is reading and summarizing scientific papers. You are given a query, a series of text embeddings and the title from a paper in order of their cosine similarity to the query. You must take the given embeddings and return a very detailed summary of the paper in the languange of the query. Here are the embeddings:"
-query: "Summarize this text."
+query: "Summarize this text and describe the size of fields that are being used."

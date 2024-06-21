@@ -87,7 +87,8 @@ pub async fn gpt_get_embeddings(text: &String) -> std::result::Result<Vec<f32>, 
 pub async fn get_embedding_vectors (filename: &str) -> Vec<EmbeddingPair> {
     let file_sha256_hash = compute_sha256(filename).unwrap();
     let mut redis_connection: redis::Connection = crate::redis_util::connect_to_redis().await;
-    let key_name = format!("{}:*", file_sha256_hash);
+    //let key_name = format!("{}:*", file_sha256_hash);
+    let key_name = format!("{}", file_sha256_hash);
     let keys: Vec<String> = redis_connection.keys(key_name).unwrap();
     let mut pair_list: Vec<EmbeddingPair> = Vec::new();
     for key in keys {
@@ -103,7 +104,8 @@ pub async fn get_embedding_vectors (filename: &str) -> Vec<EmbeddingPair> {
 pub async fn is_file_processed (filename: &str) -> bool {
     let file_sha256_hash = compute_sha256(filename).unwrap();
     let mut redis_connection: redis::Connection = crate::redis_util::connect_to_redis().await;
-    let key_name = format!("{}:*", file_sha256_hash);
+    //let key_name = format!("{}:*", file_sha256_hash);
+    let key_name = format!("{}", file_sha256_hash);
     let keys: Vec<String> = redis_connection.keys(key_name).unwrap();
     keys.len() > 0
 }
@@ -126,7 +128,8 @@ pub async fn create_embedding_list (filename: &str) -> Vec<EmbeddingPair> {
     let redis_connection: redis::Connection = crate::redis_util::connect_to_redis().await;
     let redis_arc: Arc<Mutex<redis::Connection>> = Arc::from(Mutex::from(redis_connection));            
     let max_workers = 16; // Define the maximum number of workers (threads) to use
-    let redis_count: Arc<Mutex<u32>> = Arc::from(Mutex::from(0 as u32));
+    //let redis_count: Arc<Mutex<u32>> = Arc::from(Mutex::from(0 as u32));
+    
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(max_workers)
         .build()
@@ -144,10 +147,13 @@ pub async fn create_embedding_list (filename: &str) -> Vec<EmbeddingPair> {
                     };
                     pair_list.lock().unwrap().push(new_pair.clone());
                     let serialized_data : String = serde_json::to_string(&new_pair).unwrap();
-                    let mut c = redis_count.lock().unwrap();
-                    *c += 1;
+                    //let mut c = redis_count.lock().unwrap();
+                    //*c += 1;
                     
-                    let key_name = format!("{}:{:?}", file_sha256_hash, c);
+                    let key_name = format!("{}", file_sha256_hash);
+
+                    //Let all data exist as an index in a list on the Redis server side that is under a key of
+                    //the SHA-256 hash of the file.
                     redis_arc.lock().unwrap().lpush::<_,_,()>(key_name.clone(), serialized_data).unwrap();
                 }
             });
