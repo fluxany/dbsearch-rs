@@ -121,15 +121,13 @@ async fn main() -> std::result::Result<(), std::io::Error> {
                 println!("Creating embeddings for: {:?}", file_to_process);
             }
 
-            //let query = "Summarize this paper.".to_string();
-            //let query = summary_query;
-
             let start_vecsearch = Instant::now();
             let similar_entries = search_for_similar_entries(
                 query.clone(),
                 3,
                 &mut emb_pairs
             ).await;
+            
             let duration_vecsearch = start_vecsearch.elapsed();
             println!("Embedding vector search({:?})", duration_vecsearch);
 
