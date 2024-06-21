@@ -1,0 +1,19 @@
+[package]
+name = "dbsearch"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.5.0", features = ["derive"] }
+regex = "1.5.4"
+pdf-extract = "0.7.4"
+datasize = "0.2.13"
+image = "*"
+tokio = { version = "1", features = ["full"] }
+chatgpt_rs = { path = "chatgpt-embed-rs" }
+serde = "*"
+serde_json = "*"
+rayon = "1.5"
+redis = { version = "0.24.0", features = ["json", "tokio-comp", "aio"] }
