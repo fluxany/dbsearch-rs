@@ -154,20 +154,20 @@ impl ChatGPT {
             .send()
             .await?;
             
-        let headers = response
-            .headers();
+        //let headers = response
+        //    .headers();
         
         //for h in headers.iter() {
         //    println!("header: {} = {}", h.0.to_string(), h.1.to_str().unwrap().to_string());
         //}
-        println!("header: {} = {}",
-            "x-ratelimit-remaining-requests",
-            headers.get("x-ratelimit-remaining-requests").unwrap().to_str().unwrap().to_string()
-        );
-        println!("header: {} = {}",
-            "x-ratelimit-remaining-tokens",
-            headers.get("x-ratelimit-remaining-tokens").unwrap().to_str().unwrap().to_string()
-        );
+        //println!("header: {} = {}",
+        //    "x-ratelimit-remaining-requests",
+        //    headers.get("x-ratelimit-remaining-requests").unwrap().to_str().unwrap().to_string()
+        //);
+        //println!("header: {} = {}",
+        //    "x-ratelimit-remaining-tokens",
+        //    headers.get("x-ratelimit-remaining-tokens").unwrap().to_str().unwrap().to_string()
+        //);
                     
         let json_response = 
             response.json()
@@ -211,12 +211,12 @@ impl ChatGPT {
             .send()
             .await?;
 
-        let headers = response
-            .headers();
+        //let headers = response
+        //    .headers();
         
-        for h in headers.iter() {
-            println!("header: {} = {}", h.0.to_string(), h.1.to_str().unwrap().to_string());
-        }
+        //for h in headers.iter() {
+            //println!("header: {} = {}", h.0.to_string(), h.1.to_str().unwrap().to_string());
+        //}
                     
         let json_response = 
             response.json()
