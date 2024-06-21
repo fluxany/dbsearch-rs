@@ -1,5 +1,6 @@
 use crate::text::*;
 use crate::math::*;
+use sha2::{Digest, Sha256};
 use std::sync::{Arc, Mutex};
 use std::env;
 use chatgpt::prelude::*;
@@ -14,11 +15,21 @@ use std::thread;
 use std::time::Duration;
 use redis::*;
 
+use std::fs::File;
+use std::io::{BufReader, Read};
+use std::path::Path;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EmbeddingPair {
     pub text: String,
     pub embedding: Vec<f32>,
     pub similarity: f32
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileHash {
+    pub hash: String,
+    pub filename: String,
 }
 
 impl EmbeddingPair {
@@ -29,6 +40,25 @@ impl EmbeddingPair {
             similarity: 0.0,
         }
     }
+}
+
+/// Computes the SHA-256 hash of a file and returns it as a string.
+fn compute_sha256(path: &str) -> std::result::Result<String, Box<dyn std::error::Error>> {
+    let file = File::open(path)?;
+    let mut reader = BufReader::new(file);
+    let mut hasher = Sha256::new();
+    let mut buffer = [0; 1024];
+
+    loop {
+        let bytes_read = reader.read(&mut buffer)?;
+        if bytes_read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..bytes_read]);
+    }
+
+    let result = hasher.finalize();
+    Ok(format!("{:x}", result))
 }
 
 pub async fn gpt_get_embeddings(text: &String) -> std::result::Result<Vec<f32>, chatgpt::err::Error> {
@@ -44,8 +74,7 @@ pub async fn gpt_get_embeddings(text: &String) -> std::result::Result<Vec<f32>, 
             let client = ChatGPT::new(val).unwrap();
             let response: EmbeddingCompletionResponse = client
                 .get_embeddings(&text)
-                .await?;
-            println!("Getting embeddings");
+                .await?;            
             Ok(response.embeddings().clone())
         } 
         Err(_) => {
@@ -55,12 +84,43 @@ pub async fn gpt_get_embeddings(text: &String) -> std::result::Result<Vec<f32>, 
     }
 }
 
+pub async fn get_embedding_vectors (filename: &str) -> Vec<EmbeddingPair> {
+    let file_sha256_hash = compute_sha256(filename).unwrap();
+    let mut redis_connection: redis::Connection = crate::redis_util::connect_to_redis().await;
+    let key_name = format!("{}:*", file_sha256_hash);
+    let keys: Vec<String> = redis_connection.keys(key_name).unwrap();
+    let mut pair_list: Vec<EmbeddingPair> = Vec::new();
+    for key in keys {
+        let values: Vec<String> = redis_connection.lrange(key.clone(), 0, -1).unwrap();
+        for value in values {
+            let pair: EmbeddingPair = serde_json::from_str(&value).unwrap();
+            pair_list.push(pair);
+        }
+    }
+    pair_list
+}
+
+pub async fn is_file_processed (filename: &str) -> bool {
+    let file_sha256_hash = compute_sha256(filename).unwrap();
+    let mut redis_connection: redis::Connection = crate::redis_util::connect_to_redis().await;
+    let key_name = format!("{}:*", file_sha256_hash);
+    let keys: Vec<String> = redis_connection.keys(key_name).unwrap();
+    keys.len() > 0
+}
+
 pub async fn create_embedding_list (filename: &str) -> Vec<EmbeddingPair> {
     let pdf_text = extract_pdf_text(filename);
     let mut text_summary: TextSummary = TextSummary::new(pdf_text);
     let text_list = text_summary.tokenize_words_into_chunks(
         400, 100
     );
+    
+    //let key_name = match Path::new(filename).file_name() {
+    //    Some(name) => name.to_str().unwrap().to_string(),
+    //    None => String::from("unknown")
+    //};
+    let file_sha256_hash = compute_sha256(filename).unwrap();
+
     println!("Getting total of {} text pairs", text_list.len());
     let pair_list: Arc<Mutex<Vec<EmbeddingPair>>> = Arc::new(Mutex::new(Vec::new()));
     let redis_connection: redis::Connection = crate::redis_util::connect_to_redis().await;
@@ -87,8 +147,8 @@ pub async fn create_embedding_list (filename: &str) -> Vec<EmbeddingPair> {
                     let mut c = redis_count.lock().unwrap();
                     *c += 1;
                     
-                    let key_name = format!("test.bin:{:?}", c);
-                    redis_arc.lock().unwrap().lpush::<_,_,()>(key_name.clone(), serialized_data);
+                    let key_name = format!("{}:{:?}", file_sha256_hash, c);
+                    redis_arc.lock().unwrap().lpush::<_,_,()>(key_name.clone(), serialized_data).unwrap();
                 }
             });
         });
