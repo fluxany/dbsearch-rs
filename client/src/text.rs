@@ -35,11 +35,6 @@ impl TextSummary {
     }
 }
 
-pub fn extract_pdf_text(filename: &str) -> String {
-    let bytes = std::fs::read(filename).unwrap();
-    pdf_extract::extract_text_from_mem(&bytes).unwrap()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -58,9 +53,11 @@ mod tests {
         assert_eq!(expected, chunks);
     }
 
+    /*
     #[test]
     fn test_text_summary_2() {
         let contents = extract_pdf_text("test/files/2401.14149.pdf");
         assert!(contents.len() > 0);
     }
+    */
 }

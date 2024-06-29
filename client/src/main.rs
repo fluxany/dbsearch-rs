@@ -7,8 +7,13 @@ pub mod search;
 pub mod text;
 pub mod embed;
 pub mod redis_util;
+pub mod pdf;
+pub mod hashes;
 
 use crate::embed::*;
+use crate::pdf::*;
+use crate::hashes::*;
+
 use redis::*;
 use std::env;
 use chatgpt::prelude::*;
@@ -89,7 +94,7 @@ async fn main() -> std::result::Result<(), std::io::Error> {
             .short('h')
             .required(false)
             .help("Host a manager instance"))
-        .get_matches(); 
+        .get_matches();
 
     let yaml_filename = matches.value_of("config").unwrap();
 
